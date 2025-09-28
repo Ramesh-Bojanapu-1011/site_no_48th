@@ -162,9 +162,14 @@ export default function WelcomePage() {
     const password = loginPassword.trim();
     if (email === t.adminEmail) {
       if (password === t.adminPassword) {
-        localStorage.setItem("firstname", "Admin");
-        localStorage.setItem("lastname", "Dashboard");
-        localStorage.setItem("email", email);
+        const adminUser = {
+          firstname: "Admin",
+          lastname: "Dashboard",
+          email: email,
+          role: "admin",
+          loginTime: new Date().toISOString(),
+        };
+        localStorage.setItem("currentUser", JSON.stringify(adminUser));
         navigate("/admindashboard");
         return;
       } else {
@@ -173,13 +178,32 @@ export default function WelcomePage() {
       }
     }
     const users = JSON.parse(localStorage.getItem("users") || "[]");
-    const user = users.find(
+    const userIndex = users.findIndex(
       (u) => u.email === email && u.password === password,
     );
-    if (user) {
-      localStorage.setItem("firstname", user.firstName || "");
-      localStorage.setItem("lastname", user.lastName || "");
-      localStorage.setItem("email", user.email || "");
+    if (userIndex !== -1) {
+      const user = users[userIndex];
+      const loginTime = new Date().toISOString();
+
+      // Update the user's login time in the users array
+      users[userIndex] = {
+        ...user,
+        lastLoginTime: loginTime,
+      };
+      localStorage.setItem("users", JSON.stringify(users));
+
+      // Store current user session
+      const currentUser = {
+        firstname: user.firstName || "",
+        lastname: user.lastName || "",
+        email: user.email || "",
+        phone: user.phone || "",
+        role: "user",
+        loginTime: loginTime,
+        signupTime: user.signupTime || "",
+        signupDate: user.signupDate || "",
+      };
+      localStorage.setItem("currentUser", JSON.stringify(currentUser));
       navigate("/home1");
     } else {
       alert(t.invalidLogin);
@@ -241,7 +265,7 @@ export default function WelcomePage() {
       <div className="flex flex-col items-center justify-center w-full p-8 bg-white shadow-lg lg:w-1/2 rounded-r-xl">
         <div className="w-full max-w-md">
           <div className="flex items-center justify-between mb-6">
-            <img src={logoImg} alt="Logo" className="w-24 h-15" />
+            <img src={logoImg} alt="Logo" className="w-[150px] h-auto" />
             <select
               value={language}
               onChange={handleLanguageChange}
@@ -253,13 +277,13 @@ export default function WelcomePage() {
             </select>
           </div>
 
-          <h1 className="mb-8 text-4xl font-extrabold text-center text-orange-600 whitespace-nowrap">
+          <h1 className="mb-8 text-4xl font-extrabold text-center text-orange-600 whitespace-nowrap caret-transparent">
             {t.dreamHouses}
           </h1>
 
           {!showSignup && !showForgot ? (
             <>
-              <h2 className="mb-6 text-2xl font-bold text-center text-orange-600">
+              <h2 className="mb-6 text-2xl font-bold text-center text-orange-600 caret-transparent">
                 {t.login}
               </h2>
               <form className="space-y-4" onSubmit={handleLogin}>

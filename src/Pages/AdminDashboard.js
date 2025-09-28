@@ -175,23 +175,22 @@ const AdminDashboard = () => {
 
   useEffect(() => {
     const users = JSON.parse(localStorage.getItem("users")) || [];
-    const logins = JSON.parse(localStorage.getItem("userLogins")) || {};
 
     const usersWithLogin = users.map((u) => ({
       name: `${u.firstName} ${u.lastName}`,
       email: u.email,
-      loginTime: logins[u.email] || "N/A",
+      loginTime: u.lastLoginTime || "N/A",
       signupDate: u.signupDate || "N/A",
     }));
     setAllUserData(usersWithLogin);
 
     const counts = {};
     const timestamps = [];
-    Object.entries(logins).forEach(([email, ts]) => {
-      if (ts && ts !== "N/A") {
-        const dt = new Date(ts).toLocaleDateString();
+    users.forEach((u) => {
+      if (u.lastLoginTime) {
+        const dt = new Date(u.lastLoginTime).toLocaleDateString();
         counts[dt] = (counts[dt] || 0) + 1;
-        timestamps.push({ email, dateTime: ts });
+        timestamps.push({ email: u.email, dateTime: u.lastLoginTime });
       }
     });
     const sortedDates = Object.keys(counts).sort(

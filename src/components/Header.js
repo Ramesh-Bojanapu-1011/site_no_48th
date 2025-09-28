@@ -37,7 +37,7 @@ const Header = () => {
       english: "English",
       arabic: "Arabic",
       hebrew: "Hebrew",
-      backToAdmin: "Back to Admin Dashboard",
+      backToAdmin: "Admin Dashboard",
       userDashboard: "User Dashboard",
       logout: "Logout",
     },
@@ -140,15 +140,20 @@ const Header = () => {
 
   // Get user initials
   const getInitials = () => {
-    const firstname = (localStorage.getItem("firstname") || "").trim();
-    const lastname = (localStorage.getItem("lastname") || "").trim();
-    let initials = "";
-    if (firstname) initials += firstname[0].toUpperCase();
-    if (lastname) initials += lastname[0].toUpperCase();
+    const currentUser = JSON.parse(localStorage.getItem("currentUser"));
+    if (!currentUser || !currentUser.firstname || !currentUser.lastname) {
+      return "?";
+    }
+    const firstname = currentUser.firstname.trim();
+    const lastname = currentUser.lastname.trim();
+    console.log("Firstname:", firstname);
+    console.log("Lastname:", lastname);
+    const initials = (firstname.charAt(0) + lastname.charAt(0)).toUpperCase();
+
     return initials || "?";
   };
 
-  const email = (localStorage.getItem("email") || "").trim();
+  const email = JSON.parse(localStorage.getItem("currentUser"))?.email || "";
   const initials = getInitials();
 
   // Mobile menu links
@@ -619,21 +624,7 @@ const Header = () => {
                       {t("backToAdmin")}
                     </button>
                   )}
-                  {email && email !== "admin@enkonix.in" && (
-                    <button
-                      className={`block w-full text-left px-4 py-2 ${
-                        theme === "dark"
-                          ? "text-white hover:bg-green-500"
-                          : "text-gray-800 hover:bg-green-100"
-                      }`}
-                      onClick={() => {
-                        setIsAvatarDropdownOpen(false);
-                        navigate("/userdashboard");
-                      }}
-                    >
-                      {t("userDashboard")}
-                    </button>
-                  )}
+
                   <button
                     className={`block w-full text-left px-4 py-2 ${
                       theme === "dark"
@@ -643,6 +634,7 @@ const Header = () => {
                     onClick={() => {
                       setIsAvatarDropdownOpen(false);
                       window.location.href = "/";
+                      localStorage.removeItem("currentUser");
                     }}
                   >
                     {t("logout")}
