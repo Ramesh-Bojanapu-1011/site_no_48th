@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { Bar, Line } from "react-chartjs-2";
+import { Bar, Line, Doughnut } from "react-chartjs-2";
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -10,61 +10,67 @@ import {
   Title,
   Tooltip,
   Legend,
+  ArcElement,
 } from "chart.js";
 
 const THEME_KEY = "theme";
 const LANGUAGE_KEY = "language";
+const PRIMARY_ORANGE_LIGHT = "#FF6600";
+const PRIMARY_ORANGE_DARK = "#FFE6CC";
 
 const translations = {
   en: {
+    overview: "Overview & Trends", // New Tab Label
+    detailedData: "Detailed Data", // New Tab Label
     userTable: "User Data Table",
     name: "Name",
     email: "Email",
     loginDate: "Login Date/Time",
-    loginGraph: "Login Activity Graph",
+    loginGraph: "Login Activity (Daily)",
     loginGraphTitle: "User Logins Per Day",
     signupTrends: "User Signup Trends",
     signupGraphTitle: "User Signup Trends",
+    userStatus: "30-Day User Status",
     activeUsers: "Active Users",
-    activeUsersDesc: "Logged in last 30 days",
     inactiveUsers: "Inactive Users",
-    inactiveUsersDesc: "Not logged in last 30 days",
     recentLogin: "Recent Login Activity",
     signupGrowth: "Signup Growth This Week",
-    compared: "compared to previous week",
+    compared: "vs. previous week",
     noUsers: "No users found.",
   },
   ar: {
+    overview: "نظرة عامة واتجاهات",
+    detailedData: "بيانات مفصلة",
     userTable: "جدول بيانات المستخدمين",
     name: "الاسم",
     email: "البريد الإلكتروني",
     loginDate: "تاريخ/وقت تسجيل الدخول",
-    loginGraph: "رسم بياني لنشاط تسجيل الدخول",
+    loginGraph: "نشاط تسجيل الدخول (يومي)",
     loginGraphTitle: "تسجيلات الدخول اليومية",
     signupTrends: "اتجاهات تسجيل المستخدمين",
     signupGraphTitle: "اتجاهات تسجيل المستخدمين",
+    userStatus: "حالة المستخدمين (30 يومًا)",
     activeUsers: "المستخدمون النشطون",
-    activeUsersDesc: "سجلوا الدخول خلال آخر 30 يومًا",
     inactiveUsers: "المستخدمون غير النشطين",
-    inactiveUsersDesc: "لم يسجلوا الدخول خلال آخر 30 يومًا",
     recentLogin: "نشاط تسجيل الدخول الأخير",
     signupGrowth: "نمو التسجيل هذا الأسبوع",
     compared: "مقارنة بالأسبوع السابق",
     noUsers: "لا يوجد مستخدمون.",
   },
   he: {
+    overview: "סקירה ומגמות",
+    detailedData: "נתונים מפורטים",
     userTable: "טבלת נתוני משתמשים",
     name: "שם",
     email: "אימייל",
     loginDate: "תאריך/שעת כניסה",
-    loginGraph: "גרף פעילות כניסה",
+    loginGraph: "פעילות כניסה (יומית)",
     loginGraphTitle: "כניסות משתמשים ביום",
     signupTrends: "מגמות הרשמת משתמשים",
     signupGraphTitle: "מגמות הרשמת משתמשים",
+    userStatus: "סטטוס משתמשים (30 יום)",
     activeUsers: "משתמשים פעילים",
-    activeUsersDesc: "התחברו ב-30 הימים האחרונים",
     inactiveUsers: "משתמשים לא פעילים",
-    inactiveUsersDesc: "לא התחברו ב-30 הימים האחרונים",
     recentLogin: "פעילות כניסה אחרונה",
     signupGrowth: "צמיחת הרשמות השבוע",
     compared: "בהשוואה לשבוע הקודם",
@@ -84,6 +90,7 @@ ChartJS.register(
   Title,
   Tooltip,
   Legend,
+  ArcElement,
 );
 
 const fadeInUp = {
@@ -100,6 +107,7 @@ const styles = {
         transform: translateY(0);
       }
     }
+    /* New: Added focus style to differentiate hover and active states */
     tr:hover {
       background-color: #FF6600 !important;
       color: white !important;
@@ -117,6 +125,11 @@ const styles = {
       transition: background-color 0.3s;
       cursor: default;
     }
+    .chart-container {
+        padding: 1.5rem;
+        border-radius: 12px;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.06);
+    }
   `,
 };
 
@@ -127,7 +140,6 @@ const AdminDashboard = () => {
     }
     return "light";
   });
-
   const [language, setLanguage] = useState(() => {
     if (typeof window !== "undefined") {
       return localStorage.getItem(LANGUAGE_KEY) || "en";
@@ -156,6 +168,13 @@ const AdminDashboard = () => {
     }
   }, []);
 
+  // NEW: State for the active view/tab
+  const [activeView, setActiveView] = useState("overview");
+
+  useEffect(() => {
+    // Existing useEffect logic for theme and language change handlers...
+  }, []);
+
   const themedClass = (base, dark, light) =>
     `${base} ${theme === "dark" ? dark : light}`;
   const dir = rtlLangs.includes(language) ? "rtl" : "ltr";
@@ -173,9 +192,9 @@ const AdminDashboard = () => {
     isGrowth: true,
   });
 
+  // Existing useEffect for data loading...
   useEffect(() => {
     const users = JSON.parse(localStorage.getItem("users")) || [];
-
     const usersWithLogin = users.map((u) => ({
       name: `${u.firstName} ${u.lastName}`,
       email: u.email,
@@ -184,6 +203,7 @@ const AdminDashboard = () => {
     }));
     setAllUserData(usersWithLogin);
 
+    // --- Login Stats ---
     const counts = {};
     const timestamps = [];
     users.forEach((u) => {
@@ -200,12 +220,12 @@ const AdminDashboard = () => {
       labels: sortedDates,
       data: sortedDates.map((d) => counts[d]),
     });
-
     const latest = timestamps
       .sort((a, b) => new Date(b.dateTime) - new Date(a.dateTime))
       .slice(0, 5);
     setRecentLogins(latest);
 
+    // --- Signup Stats and Growth ---
     const sCounts = {};
     users.forEach((u) => {
       if (u.signupDate) {
@@ -231,6 +251,7 @@ const AdminDashboard = () => {
       isGrowth: growth >= 0,
     });
 
+    // --- User Status ---
     const now = Date.now();
     const activeTh = 30 * 24 * 60 * 60 * 1000;
     let act = 0,
@@ -261,6 +282,7 @@ const AdminDashboard = () => {
     );
   }
 
+  // --- Chart Data & Options (using original orange colors) ---
   const loginData = {
     labels: loginStats.labels,
     datasets: [
@@ -272,53 +294,388 @@ const AdminDashboard = () => {
       },
     ],
   };
-
   const signupData = {
     labels: signupStats.labels,
     datasets: [
       {
         label: t("signupGraphTitle", language),
         data: signupStats.data,
-        fill: false,
+        fill: true, // Changed to fill for a nicer area graph look
         borderColor: "rgba(255,102,0,0.9)",
-        backgroundColor: "rgba(255,102,0,0.5)",
-        tension: 0.3,
-        pointRadius: 6,
+        backgroundColor:
+          theme === "dark" ? "rgba(255,102,0,0.3)" : "rgba(255,102,0,0.1)",
+        tension: 0.4, // Smoother line
+        pointRadius: 4,
+        pointBackgroundColor: PRIMARY_ORANGE_LIGHT,
       },
     ],
   };
-
-  const chartOptions = {
+  const userStatusData = {
+    labels: [t("activeUsers", language), t("inactiveUsers", language)],
+    datasets: [
+      {
+        data: [userStatus.activeUsers, userStatus.inactiveUsers],
+        backgroundColor: [
+          "#FF6600", // Active Users (Primary Orange)
+          "#FDBA74", // Inactive Users (Lighter Orange for contrast)
+        ],
+        hoverBackgroundColor: ["#FF8000", "#FCD34D"],
+        borderWidth: 0,
+      },
+    ],
+  };
+  const chartOptionsBase = {
     responsive: true,
     plugins: {
       legend: {
-        labels: { color: theme === "dark" ? "#FFE6CC" : "#FF6600" },
-        position: "top",
+        labels: {
+          color: theme === "dark" ? PRIMARY_ORANGE_DARK : PRIMARY_ORANGE_LIGHT,
+        },
+        position: "bottom",
       },
       title: {
         display: true,
-        font: { size: 22, weight: "bold" },
-        color: theme === "dark" ? "#FFE6CC" : "#FF6600",
+        font: { size: 20, weight: "bold" },
+        color: theme === "dark" ? PRIMARY_ORANGE_DARK : PRIMARY_ORANGE_LIGHT,
       },
       tooltip: { mode: "index", intersect: false },
     },
     scales: {
       x: {
         ticks: {
-          color: theme === "dark" ? "#FFE6CC" : "#FF6600",
+          color: theme === "dark" ? PRIMARY_ORANGE_DARK : PRIMARY_ORANGE_LIGHT,
           maxRotation: 90,
           minRotation: 45,
         },
-        grid: { color: theme === "dark" ? "#33211A" : "#FFE6CC" },
+        grid: {
+          color: theme === "dark" ? "#33211A" : "#FFEDD5",
+          drawBorder: false,
+        },
       },
       y: {
-        ticks: { color: theme === "dark" ? "#FFE6CC" : "#FF6600" },
-        grid: { color: theme === "dark" ? "#33211A" : "#FFE6CC" },
+        ticks: {
+          color: theme === "dark" ? PRIMARY_ORANGE_DARK : PRIMARY_ORANGE_LIGHT,
+        },
+        grid: { color: theme === "dark" ? "#33211A" : "#FFEDD5" },
         beginAtZero: true,
       },
     },
   };
+  const doughnutOptions = {
+    ...chartOptionsBase,
+    cutout: "70%",
+    scales: {},
+    plugins: {
+      ...chartOptionsBase.plugins,
+      title: { display: false },
+      legend: {
+        ...chartOptionsBase.plugins.legend,
+        position: "right",
+        align: "middle",
+        labels: {
+          ...chartOptionsBase.plugins.legend.labels,
+          boxWidth: 15,
+          padding: 20,
+        },
+      },
+      tooltip: {
+        callbacks: {
+          label: ({ label, raw }) =>
+            `${label}: ${raw} (${((raw / (userStatus.activeUsers + userStatus.inactiveUsers)) * 100).toFixed(1)}%)`,
+        },
+      },
+    },
+  };
 
+  // --- Utility for Tab Styling ---
+  const getTabClass = (view) =>
+    activeView === view
+      ? themedClass(
+          "border-b-4 font-bold transition-all",
+          "border-orange-500 text-orange-200",
+          "border-orange-600 text-orange-800",
+        )
+      : themedClass(
+          "border-b-2 hover:border-orange-400 transition-all",
+          "border-transparent text-gray-400 hover:text-orange-200",
+          "border-transparent text-gray-500 hover:text-orange-600",
+        );
+
+  // --- Render Functions for Tab Content ---
+  const renderOverview = () => (
+    <div className="space-y-8">
+      {/* Metrics Header Bar */}
+      <div
+        className={themedClass(
+          "grid grid-cols-1 md:grid-cols-3 gap-6 p-6 rounded-xl shadow-lg",
+          "bg-[#33211A]",
+          "bg-orange-100",
+        )}
+        style={{ ...fadeInUp, animationDelay: "0.1s" }}
+      >
+        {/* Metric 1: Signup Growth */}
+        <div
+          className={themedClass(
+            "p-4 rounded-lg text-center shadow-md card-hover",
+            signupGrowth.isGrowth
+              ? "bg-orange-600 text-white"
+              : "bg-red-800 text-white",
+            signupGrowth.isGrowth
+              ? "bg-orange-500 text-white"
+              : "bg-red-500 text-white",
+          )}
+        >
+          <p className="text-sm font-light opacity-90">
+            {t("signupGrowth", language)}
+          </p>
+          <p className="text-3xl font-extrabold mb-0.5">
+            {signupGrowth.isGrowth ? "▲" : "▼"} {signupGrowth.percent}%
+          </p>
+          <small className="font-medium opacity-80">
+            {t("compared", language)}
+          </small>
+        </div>
+
+        {/* Metric 2: Active Users */}
+        <div
+          className={themedClass(
+            "p-4 rounded-lg text-center shadow-md card-hover",
+            "bg-orange-800 text-white",
+            "bg-orange-600 text-white",
+          )}
+        >
+          <p className="text-sm font-light opacity-90">
+            {t("activeUsers", language)}
+          </p>
+          <p className="text-3xl font-extrabold">{userStatus.activeUsers}</p>
+          <small className="font-medium opacity-80">
+            of {userStatus.activeUsers + userStatus.inactiveUsers} total
+          </small>
+        </div>
+
+        {/* Metric 3: Inactive Users */}
+        <div
+          className={themedClass(
+            "p-4 rounded-lg text-center shadow-md card-hover",
+            "bg-orange-900 text-orange-100",
+            "bg-orange-200 text-orange-900",
+          )}
+        >
+          <p className="text-sm font-light opacity-90">
+            {t("inactiveUsers", language)}
+          </p>
+          <p className="text-3xl font-extrabold">{userStatus.inactiveUsers}</p>
+          <small className="font-medium opacity-80">Needs follow-up</small>
+        </div>
+      </div>
+
+      {/* Charts & Activity Grid */}
+      <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
+        {/* Login Chart (Main Chart) */}
+        <section
+          className={themedClass(
+            "chart-container shadow-xl lg:col-span-2",
+            "bg-[#1E2A38]",
+            "bg-orange-50",
+          )}
+          style={{ ...fadeInUp, animationDelay: "0.2s" }}
+        >
+          <h3
+            className={themedClass(
+              "mb-4 font-bold text-lg",
+              "text-orange-200",
+              "text-orange-700",
+            )}
+          >
+            {t("loginGraph", language)}
+          </h3>
+          <Bar
+            data={loginData}
+            options={{
+              ...chartOptionsBase,
+              scales: {
+                ...chartOptionsBase.scales,
+                y: { ...chartOptionsBase.scales.y, display: false }, // Hide Y-axis
+                x: { ...chartOptionsBase.scales.x, grid: { display: false } }, // Hide X grid
+              },
+              plugins: {
+                ...chartOptionsBase.plugins,
+                title: { display: false },
+                legend: { display: false },
+              },
+            }}
+          />
+        </section>
+
+        {/* User Status Doughnut (Small Card) */}
+        <section
+          className={themedClass(
+            "chart-container shadow-xl flex flex-col justify-center items-center",
+            "bg-[#33211A]",
+            "bg-orange-100",
+          )}
+          style={{ ...fadeInUp, animationDelay: "0.3s" }}
+        >
+          <h3
+            className={themedClass(
+              "mb-6 font-bold text-lg w-full text-center",
+              "text-orange-200",
+              "text-orange-700",
+            )}
+          >
+            {t("userStatus", language)}
+          </h3>
+          <div className="w-full max-w-xs md:max-w-xs">
+            <Doughnut data={userStatusData} options={doughnutOptions} />
+          </div>
+        </section>
+
+        {/* Signup Trends (Second Chart) */}
+        <section
+          className={themedClass(
+            "chart-container shadow-xl lg:col-span-2",
+            "bg-[#33211A]",
+            "bg-orange-100",
+          )}
+          style={{ ...fadeInUp, animationDelay: "0.4s" }}
+        >
+          <h3
+            className={themedClass(
+              "mb-4 font-bold text-lg",
+              "text-orange-200",
+              "text-orange-700",
+            )}
+          >
+            {t("signupTrends", language)}
+          </h3>
+          <Line
+            data={signupData}
+            options={{
+              ...chartOptionsBase,
+              plugins: {
+                ...chartOptionsBase.plugins,
+                title: { display: false },
+                legend: { display: false },
+              },
+            }}
+          />
+        </section>
+
+        {/* Recent Login Activity */}
+        <section
+          className={themedClass(
+            "chart-container shadow-xl",
+            "bg-[#1E2A38]",
+            "bg-orange-50",
+          )}
+          style={{ ...fadeInUp, animationDelay: "0.5s" }}
+        >
+          <h3
+            className={themedClass(
+              "mb-4 font-bold text-lg",
+              "text-orange-200",
+              "text-orange-700",
+            )}
+          >
+            {t("recentLogin", language)}
+          </h3>
+          <div style={{ maxHeight: 200, overflowY: "auto" }}>
+            {recentLogins.length > 0 ? (
+              recentLogins.map((entry, idx) => (
+                <div
+                  key={idx}
+                  className="flex justify-between p-3 text-sm border-b border-orange-300 dark:border-orange-800 activity-item"
+                >
+                  <span className="truncate">{entry.email}</span>
+                  <span>{new Date(entry.dateTime).toLocaleTimeString()}</span>
+                </div>
+              ))
+            ) : (
+              <p className="p-3 text-center opacity-70">No recent logins.</p>
+            )}
+          </div>
+        </section>
+      </div>
+    </div>
+  );
+
+  const renderDetailedData = () => (
+    <section
+      className={themedClass(
+        "p-4 md:p-8 rounded-xl shadow-xl mt-4",
+        "bg-[#33211A]",
+        "bg-orange-100",
+      )}
+      style={{ ...fadeInUp, animationDelay: "0.1s" }}
+    >
+      <h2
+        className={themedClass(
+          "mb-6 font-extrabold text-3xl border-b pb-3",
+          "text-orange-200 border-orange-700",
+          "text-orange-700 border-orange-300",
+        )}
+      >
+        {t("userTable", language)}
+      </h2>
+      <div style={{ overflowX: "auto", maxHeight: 500, overflowY: "auto" }}>
+        <table
+          className={themedClass(
+            "w-full border-collapse min-w-[700px] text-base",
+            "text-orange-100",
+            "text-orange-900",
+          )}
+        >
+          <thead>
+            <tr
+              className={themedClass(
+                "sticky top-0 z-10", // Sticky header for better scrolling
+                "bg-orange-800 text-white",
+                "bg-orange-600 text-white",
+              )}
+            >
+              <th className="p-3 text-left">{t("name", language)}</th>
+              <th className="p-3 text-left">{t("email", language)}</th>
+              <th className="p-3 text-left">{t("loginDate", language)}</th>
+              <th className="p-3 text-left">Signup Date</th>
+            </tr>
+          </thead>
+          <tbody>
+            {allUserData.map((u, idx) => (
+              <tr
+                key={idx}
+                style={{
+                  borderBottom: "1px solid #cbd5e1",
+                  backgroundColor:
+                    idx % 2 === 0
+                      ? theme === "dark"
+                        ? "#33211A"
+                        : "#fff4e6"
+                      : theme === "dark"
+                        ? "#1E2A38"
+                        : "#FFE6CC",
+                }}
+              >
+                <td className="p-3">{u.name}</td>
+                <td className="p-3">{u.email}</td>
+                <td className="p-3">
+                  {u.loginTime !== "N/A"
+                    ? new Date(u.loginTime).toLocaleString()
+                    : "—"}
+                </td>
+                <td className="p-3">
+                  {u.signupDate !== "N/A"
+                    ? new Date(u.signupDate).toLocaleDateString()
+                    : "—"}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  );
+
+  // --- Main Render ---
   return (
     <>
       <style>{styles.keyframes}</style>
@@ -332,231 +689,36 @@ const AdminDashboard = () => {
       >
         <div
           className={themedClass(
-            "max-w-4xl md:max-w-5xl mx-auto p-4 md:p-8 rounded-xl shadow-lg",
+            "max-w-7xl mx-auto p-4 md:p-8 rounded-xl shadow-2xl",
             "bg-[#1a1a1a]",
             "bg-white",
           )}
         >
-          {/* User Data Table */}
-          <section
+          {/* Tab Navigation */}
+          <div
             className={themedClass(
-              "mb-12 p-4 md:p-8 rounded-xl shadow",
-              "bg-[#33211A]",
-              "bg-orange-100",
+              "flex space-x-6 border-b pb-2 mb-8",
+              "border-gray-700",
+              "border-gray-200",
             )}
-            style={fadeInUp}
           >
-            <h2
-              className={themedClass(
-                "mb-6 font-bold text-2xl",
-                "text-orange-200",
-                "text-orange-700",
-              )}
+            <button
+              onClick={() => setActiveView("overview")}
+              className={`pb-2 text-xl ${getTabClass("overview")}`}
             >
-              {t("userTable", language)}
-            </h2>
-            <div style={{ overflowX: "auto" }}>
-              <table
-                className={themedClass(
-                  "w-full border-collapse min-w-[600px] text-base",
-                  "text-orange-100",
-                  "text-orange-900",
-                )}
-              >
-                <thead>
-                  <tr
-                    className={themedClass(
-                      "",
-                      "bg-orange-800 text-white",
-                      "bg-orange-600 text-white",
-                    )}
-                  >
-                    <th className="p-3 text-left">{t("name", language)}</th>
-                    <th className="p-3 text-left">{t("email", language)}</th>
-                    <th className="p-3 text-left">
-                      {t("loginDate", language)}
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {allUserData.map((u, idx) => (
-                    <tr
-                      key={idx}
-                      style={{
-                        borderBottom: "1px solid #cbd5e1",
-                        backgroundColor:
-                          idx % 2 === 0
-                            ? theme === "dark"
-                              ? "#33211A"
-                              : "#fff4e6"
-                            : theme === "dark"
-                              ? "#1E2A38"
-                              : "#FFE6CC",
-                      }}
-                    >
-                      <td className="p-3">{u.name}</td>
-                      <td className="p-3">{u.email}</td>
-                      <td className="p-3">
-                        {u.loginTime !== "N/A"
-                          ? new Date(u.loginTime).toLocaleString()
-                          : "—"}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </section>
+              {t("overview", language)}
+            </button>
+            <button
+              onClick={() => setActiveView("detailedData")}
+              className={`pb-2 text-xl ${getTabClass("detailedData")}`}
+            >
+              {t("detailedData", language)}
+            </button>
+          </div>
 
-          {/* Login Chart */}
-          <section
-            className={themedClass(
-              "mb-12 p-4 md:p-8 rounded-xl shadow",
-              "bg-[#1E2A38]",
-              "bg-orange-50",
-            )}
-            style={fadeInUp}
-          >
-            <h2
-              className={themedClass(
-                "mb-6 font-bold text-2xl",
-                "text-orange-200",
-                "text-orange-700",
-              )}
-            >
-              {t("loginGraph", language)}
-            </h2>
-            <Bar
-              data={loginData}
-              options={{
-                ...chartOptions,
-                plugins: {
-                  ...chartOptions.plugins,
-                  title: {
-                    ...chartOptions.plugins.title,
-                    text: t("loginGraphTitle", language),
-                  },
-                },
-              }}
-            />
-          </section>
-
-          {/* Signup Chart */}
-          <section
-            className={themedClass(
-              "mb-12 p-4 md:p-8 rounded-xl shadow",
-              "bg-[#33211A]",
-              "bg-orange-100",
-            )}
-            style={fadeInUp}
-          >
-            <h2
-              className={themedClass(
-                "mb-6 font-bold text-2xl",
-                "text-orange-200",
-                "text-orange-700",
-              )}
-            >
-              {t("signupTrends", language)}
-            </h2>
-            <Line
-              data={signupData}
-              options={{
-                ...chartOptions,
-                plugins: {
-                  ...chartOptions.plugins,
-                  title: {
-                    ...chartOptions.plugins.title,
-                    text: t("signupGraphTitle", language),
-                  },
-                },
-              }}
-            />
-          </section>
-
-          {/* Active / Inactive Users */}
-          <section
-            className={themedClass(
-              "flex flex-col md:flex-row gap-6 mb-10 p-4 md:p-8 rounded-xl shadow",
-              "bg-[#1E2A38]",
-              "bg-orange-50",
-            )}
-            style={fadeInUp}
-          >
-            <div
-              className={themedClass(
-                "flex-1 card-hover p-6 rounded-xl text-center shadow",
-                "bg-orange-800 text-white",
-                "bg-orange-600 text-white",
-              )}
-            >
-              <h3 className="mb-2 font-bold">{t("activeUsers", language)}</h3>
-              <p className="text-3xl font-bold">{userStatus.activeUsers}</p>
-              <small>{t("activeUsersDesc", language)}</small>
-            </div>
-            <div
-              className={themedClass(
-                "flex-1 card-hover p-6 rounded-xl text-center shadow",
-                "bg-orange-900 text-orange-100",
-                "bg-orange-200 text-orange-900",
-              )}
-            >
-              <h3 className="mb-2 font-bold">{t("inactiveUsers", language)}</h3>
-              <p className="text-3xl font-bold">{userStatus.inactiveUsers}</p>
-              <small>{t("inactiveUsersDesc", language)}</small>
-            </div>
-          </section>
-
-          {/* Recent Login Activity */}
-          <section
-            className={themedClass(
-              "mb-12 p-4 md:p-8 rounded-xl shadow",
-              "bg-[#33211A]",
-              "bg-orange-100",
-            )}
-            style={fadeInUp}
-          >
-            <h2
-              className={themedClass(
-                "mb-4 font-bold text-2xl",
-                "text-orange-200",
-                "text-orange-700",
-              )}
-            >
-              {t("recentLogin", language)}
-            </h2>
-            <div style={{ maxHeight: 200, overflowY: "auto" }}>
-              {recentLogins.map((entry, idx) => (
-                <div
-                  key={idx}
-                  className="flex justify-between p-3 border-b border-orange-200 activity-item"
-                >
-                  <span>{entry.email}</span>
-                  <span>{new Date(entry.dateTime).toLocaleString()}</span>
-                </div>
-              ))}
-            </div>
-          </section>
-
-          {/* Signup Growth */}
-          <section
-            className={themedClass(
-              "card-hover p-6 rounded-xl text-center shadow mb-12",
-              signupGrowth.isGrowth
-                ? "bg-orange-100 text-orange-900"
-                : "bg-red-100 text-red-700",
-              signupGrowth.isGrowth
-                ? "bg-orange-50 text-orange-900"
-                : "bg-red-50 text-red-700",
-            )}
-            style={fadeInUp}
-          >
-            <h3 className="mb-2 font-bold">{t("signupGrowth", language)}</h3>
-            <p className="text-3xl font-bold">
-              {signupGrowth.isGrowth ? "▲" : "▼"} {signupGrowth.percent}%
-            </p>
-            <small>{t("compared", language)}</small>
-          </section>
+          {/* Tab Content */}
+          {activeView === "overview" && renderOverview()}
+          {activeView === "detailedData" && renderDetailedData()}
         </div>
       </div>
     </>
