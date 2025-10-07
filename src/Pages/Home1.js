@@ -899,9 +899,9 @@ const Home1 = () => {
               viewport={{ once: false }}
               transition={{ duration: 0.5 }}
               className={themedClass(
-                "relative w-[180px] h-[180px] p-6 flex flex-col items-center justify-center cursor-pointer overflow-hidden shadow-lg transition-transform duration-300",
-                "bg-gray-800 hover:bg-gray-700 rounded-[55px_0_55px_0]",
-                "bg-gradient-to-br from-orange-300 to-orange-400 hover:from-orange-400 hover:to-orange-500 rounded-xl",
+                "relative w-[180px] h-[180px] p-6 flex flex-col items-center justify-center cursor-pointer overflow-hidden shadow-lg transition-transform duration-300 rounded-[55px_0_55px_0]",
+                "bg-gray-800 hover:bg-gray-700 ",
+                "bg-gradient-to-br from-orange-300 to-orange-400 hover:from-orange-400 hover:to-orange-500",
               )}
             >
               {/* Count */}
